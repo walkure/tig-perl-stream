@@ -1,0 +1,29 @@
+irc:
+ #IRC server side charset
+ charset: iso-2022-jp
+ #IRC server name
+ server: localhost
+ #IRC server port
+ port: 16660
+ #IRC server password(if the server requires)
+# password: hohho
+ #nick
+ nick: tw
+ #name
+ name: twitter
+ #description
+ desc: twitter irc gateway with user streaming
+
+account:
+ consumer_key: XQXMxCHtyLjv0VpJAuQaw
+ consumer_secret: NBboKarfRahbivvV3FGICuzKrI3fZLpU5e5ZlwX2w
+ #Your Name(use to find your mention)
+ name: **YOUR Screen name(exclude '@')**
+ token: **YOUR Access Token**
+ secret: **YOUR Access Secret**
+
+channels:
+ #channel to see your mention
+ @: '#twitter-reply:*.jp'
+ #channel to see any message
+ *: '#twitter:*.jp'
