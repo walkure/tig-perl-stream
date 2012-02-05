@@ -1,0 +1,59 @@
+tig-perl-stream
+
+◇なんぞこれ
+TwitterのUser Streaming API を用いてTLを拾ってきてIRCに突っ込むクライアントです。
+設定はconfig.yaml-distを参考にしてください。引数に指定したYAMLを読みに行きます。
+デフォルト(引数無いとき)はconfig.yamlです。
+
+IRCのメッセージハンドリングは最小限しかしていません。
+繋ぎに行くIRCサーバは自前でローカルに立てたモノを使うと良いと思います。
+サーバソフトウェアはInspIRCdを使っています。他のソフトウェアで動くかは分かりません。
+
+◇設定
+config.yamlいじってください。OAuthアプリ登録は適当に。
+http://search.cpan.org/dist/Net-Twitter-Lite/lib/Net/Twitter/Lite.pm#OAUTH_EXAMPLES
+あたりのコードを使うと良いんじゃないでしょうか。
+
+設定の解析にYAML::Syck使ってるんで、無ければ入れてくださいな。
+
+◇使い方
+起動すると、指定されたIRCサーバとTwitterに接続して指定されたチャンネルに入ります。
+で、何かイベントが発生するとIRCサーバへ伝えます。逆に、チャンネルで何か喋ると
+Tweetします。
+
+メッセージはこんな感じで出ます。
+
+02:40:09 <しゅうまい君(shuumai):CFbU94VLdK> 試しに右に突入してない。おやすみ、今夜はS
+
+screen nameの後ろはメッセージIDを62進数に変換したものです。このIDを用いて、適当な操作を
+することが出来ます。
+
+・Replyを送る
+>CFbU94VLdK @shuumai おやすー。
+
+・ふぁぼる
+*CFbU94VLdK 
+
+・ふぁぼを消す
+*CFbU94VLdK 何か適当な文字列
+
+・公式RTする
+@CFbU94VLdK
+
+・発言を消す/RTをやめる
+$CFbU94VLdK
+
+イベント(現時点ではfollow fav/unfav mention)を拾うと、config.yamlで@に指定したchへも
+メッセージを吐きます。mentionであることを明示的に主張するフラグは見えなかったので、
+config.yamlで自分のscreen nameを指定する必要があります。
+
+◇Known bugs
+・再接続に失敗することがある
+・時折JSONのパースにしくじることがある
+
+◇License
+MIT License
+
+◇作者
+walkure at kmc.gr.jp
+

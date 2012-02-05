@@ -1,0 +1,48 @@
+tig-perl-stream
+===
+This is an abridged document for non-Japanese user.
+
+*What is this.
+This is a twitter client for IRC lovers.
+This client use the user streaming API.So You can read any message immediately.
+
+*Configulation
+Edit config.yaml(default name).
+If you want to use another configuration file name, put the filename as the argument.
+
+When I'm registering OAuth Application,I'm using the sample code of Net::Twitter::Lite.
+http://search.cpan.org/dist/Net-Twitter-Lite/lib/Net/Twitter/Lite.pm#OAUTH_EXAMPLES
+
+*How to use.
+Configure and start.If successfully read config, connect to server(Twitter/IRC).
+When you receive UserStream event,send to your IRC channel immediately.
+
+02:40:09 <しゅうまい君(shuumai):CFbU94VLdK> 試しに右に突入してない。おやすみ、今夜はS
+
+"CFbU94VLdK" is base-62 number of message UID.
+
+-send reply
+>CFbU94VLdK @shuumai おやすー。
+
+-fav
+*CFbU94VLdK 
+
+-unfav
+*CFbU94VLdK (any characters)
+
+-retweet
+@CFbU94VLdK
+
+-delete(your message/retweet)
+$CFbU94VLdK
+
+*Known bugs
+-sometimes failure to reconnect to server
+-sometimes failure to parse JSON message
+
+*License
+MIT License
+
+*Author
+walkure at kmc.gr.jp
+
