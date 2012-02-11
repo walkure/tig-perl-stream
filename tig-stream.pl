@@ -153,9 +153,9 @@ sub stream_callback
 				$text =~ s/$url->{url}/$url->{expanded_url}/g;
 			}
 		}
-		if(defined $obj->{entities}{medias}){
-			foreach my $url(@{$obj->{entities}{medias}}){
-				$text =~ s/$url->{url}/$url->{expanded_url}/g;
+		if(defined $obj->{entities}{media}){
+			foreach my $url(@{$obj->{entities}{media}}){
+				$text =~ s/$url->{url}/$url->{media_url}/g;
 			}
 		}
 
