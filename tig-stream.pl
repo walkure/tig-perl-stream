@@ -147,6 +147,17 @@ sub stream_callback
 		my @epoch = localtime(str2time($obj->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
+		
+		if(defined $obj->{entities}{urls}){
+			foreach my $url(@{$obj->{entities}{urls}}){
+				$text =~ s/$url->{url}/$url->{expanded_url}/g;
+			}
+		}
+		if(defined $obj->{entities}{medias}){
+			foreach my $url(@{$obj->{entities}{medias}}){
+				$text =~ s/$url->{url}/$url->{expanded_url}/g;
+			}
+		}
 
 		my $msg;
 		if(defined $obj->{retweeted_status}){
