@@ -17,12 +17,12 @@ http://search.cpan.org/dist/Net-Twitter-Lite/lib/Net/Twitter/Lite.pm#OAUTH_EXAMP
 Configure and start.If successfully read config, connect to server(Twitter/IRC).
 When you receive UserStream event,send to your IRC channel immediately.
 
-02:40:09 <¤·¤å¤¦¤Ş¤¤·¯(shuumai):CFbU94VLdK> »î¤·¤Ë±¦¤ËÆÍÆş¤·¤Æ¤Ê¤¤¡£¤ª¤ä¤¹¤ß¡¢º£Ìë¤ÏS
+02:40:09 <ã—ã‚…ã†ã¾ã„å›(shuumai):CFbU94VLdK> è©¦ã—ã«å³ã«çªå…¥ã—ã¦ãªã„ã€‚ãŠã‚„ã™ã¿ã€ä»Šå¤œã¯S
 
 "CFbU94VLdK" is base-62 number of message UID.
 
 -send reply
->CFbU94VLdK @shuumai ¤ª¤ä¤¹¡¼¡£
+>CFbU94VLdK @shuumai ãŠã‚„ã™ãƒ¼ã€‚
 
 -fav
 *CFbU94VLdK 
@@ -44,5 +44,5 @@ $CFbU94VLdK
 MIT License
 
 *Author
-walkure at kmc.gr.jp
+walkure at 3pf.jp
 
