@@ -2,7 +2,7 @@ package UpdateSock;
 
 # tig-perl-stream 
 #
-# by walkure at kmc.gr.jp
+# by walkure at 3pf.jp
 
 use strict;
 use warnings;
