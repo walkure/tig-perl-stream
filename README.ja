@@ -1,59 +1,59 @@
 tig-perl-stream
 
-���ʤ󤾤���
-Twitter��User Streaming API ���Ѥ���TL�򽦤äƤ���IRC���ͤù��९�饤����ȤǤ���
-�����config.yaml-dist�򻲹ͤˤ��Ƥ��������������˻��ꤷ��YAML���ɤߤ˹Ԥ��ޤ���
-�ǥե����(����̵���Ȥ�)��config.yaml�Ǥ���
+◇なんぞこれ
+TwitterのUser Streaming API を用いてTLを拾ってきてIRCに突っ込むクライアントです。
+設定はconfig.yaml-distを参考にしてください。引数に指定したYAMLを読みに行きます。
+デフォルト(引数無いとき)はconfig.yamlです。
 
-IRC�Υ�å������ϥ�ɥ�󥰤ϺǾ��¤������Ƥ��ޤ���
-�Ҥ��˹Ԥ�IRC�����Фϼ����ǥ��������Ω�Ƥ���Τ�Ȥ����ɤ��Ȼפ��ޤ���
-�����Х��եȥ�������InspIRCd��ȤäƤ��ޤ���¾�Υ��եȥ�������ư������ʬ����ޤ���
+IRCのメッセージハンドリングは最小限しかしていません。
+繋ぎに行くIRCサーバは自前でローカルに立てたモノを使うと良いと思います。
+サーバソフトウェアはInspIRCdを使っています。他のソフトウェアで動くかは分かりません。
 
-������
-config.yaml�����äƤ���������OAuth���ץ���Ͽ��Ŭ���ˡ�
+◇設定
+config.yamlいじってください。OAuthアプリ登録は適当に。
 http://search.cpan.org/dist/Net-Twitter-Lite/lib/Net/Twitter/Lite.pm#OAUTH_EXAMPLES
-������Υ����ɤ�Ȥ����ɤ��󤸤�ʤ��Ǥ��礦����
+あたりのコードを使うと良いんじゃないでしょうか。
 
-����β��Ϥ�YAML::Syck�ȤäƤ��ǡ�̵���������Ƥ��������ʡ�
+設定の解析にYAML::Syck使ってるんで、無ければ入れてくださいな。
 
-���Ȥ���
-��ư����ȡ����ꤵ�줿IRC�����Ф�Twitter����³���ƻ��ꤵ�줿�����ͥ������ޤ���
-�ǡ��������٥�Ȥ�ȯ�������IRC�����Ф������ޤ����դˡ������ͥ�ǲ��������
-Tweet���ޤ���
+◇使い方
+起動すると、指定されたIRCサーバとTwitterに接続して指定されたチャンネルに入ります。
+で、何かイベントが発生するとIRCサーバへ伝えます。逆に、チャンネルで何か喋ると
+Tweetします。
 
-��å������Ϥ���ʴ����ǽФޤ���
+メッセージはこんな感じで出ます。
 
-02:40:09 <���夦�ޤ���(shuumai):CFbU94VLdK> ��˱����������Ƥʤ������䤹�ߡ������S
+02:40:09 <しゅうまい君(shuumai):CFbU94VLdK> 試しに右に突入してない。おやすみ、今夜はS
 
-screen name�θ���ϥ�å�����ID��62�ʿ����Ѵ�������ΤǤ�������ID���Ѥ��ơ�Ŭ��������
-���뤳�Ȥ�����ޤ���
+screen nameの後ろはメッセージIDを62進数に変換したものです。このIDを用いて、適当な操作を
+することが出来ます。
 
-��Reply������
->CFbU94VLdK @shuumai ���䤹����
+・Replyを送る
+>CFbU94VLdK @shuumai おやすー。
 
-���դ��ܤ�
+・ふぁぼる
 *CFbU94VLdK 
 
-���դ��ܤ�ä�
-*CFbU94VLdK ����Ŭ����ʸ����
+・ふぁぼを消す
+*CFbU94VLdK 何か適当な文字列
 
-������RT����
+・公式RTする
 @CFbU94VLdK
 
-��ȯ����ä�/RT�����
+・発言を消す/RTをやめる
 $CFbU94VLdK
 
-���٥��(�������Ǥ�follow fav/unfav mention)�򽦤��ȡ�config.yaml��@�˻��ꤷ��ch�ؤ�
-��å��������Ǥ��ޤ���mention�Ǥ��뤳�Ȥ�����Ū�˼�ĥ����ե饰�ϸ����ʤ��ä��Τǡ�
-config.yaml�Ǽ�ʬ��screen name����ꤹ��ɬ�פ�����ޤ���
+イベント(現時点ではfollow fav/unfav mention)を拾うと、config.yamlで@に指定したchへも
+メッセージを吐きます。mentionであることを明示的に主張するフラグは見えなかったので、
+config.yamlで自分のscreen nameを指定する必要があります。
 
-��Known bugs
-������³�˼��Ԥ��뤳�Ȥ�����
-������JSON�Υѡ����ˤ������뤳�Ȥ�����
+◇Known bugs
+・再接続に失敗することがある
+・時折JSONのパースにしくじることがある
 
-��License
+◇License
 MIT License
 
-�����
-walkure at kmc.gr.jp
+◇作者
+walkure at 3pf.jp 
 
