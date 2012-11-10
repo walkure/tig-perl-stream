@@ -140,24 +140,44 @@ sub stream_callback
 	my $obj = shift;
 	my $event = $obj->{event};
 	my $dm = $obj->{direct_message};
+	my $del = $obj->{delete};
 
 	if(defined $obj->{text}){
-		my $text = Encode::encode($yaml->{irc}{charset},$obj->{text});
 		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}->{name});
 		my @epoch = localtime(str2time($obj->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
-		
+
+		#expand URLs
+		my $text = $obj->{text};
+		my @short_urls;
 		if(defined $obj->{entities}{urls}){
-			foreach my $url(@{$obj->{entities}{urls}}){
-				$text =~ s/$url->{url}/$url->{expanded_url}/g;
+			foreach my $url(@{$obj->{entities}{urls}} ){
+				push(@short_urls,{
+						offset => $url->{indices}->[0],
+						short_url => $url->{url},
+						long_url => $url->{expanded_url},
+					});
 			}
 		}
 		if(defined $obj->{entities}{media}){
 			foreach my $url(@{$obj->{entities}{media}}){
-				$text =~ s/$url->{url}/$url->{media_url}/g;
+				push(@short_urls,{
+						offset => $url->{indices}->[0],
+						short_url => $url->{url},
+						long_url => $url->{media_url},
+					});
+
 			}
 		}
+		if(scalar @short_urls) {
+			foreach my $url(sort {$b->{offset} <=> $a->{offset}} @short_urls){
+				print "idx=".$url->{offset}."\n";
+				substr($text,$url->{offset},length($url->{short_url}),$url->{long_url});
+			}
+		}
+
+		$text = Encode::encode($yaml->{irc}{charset},$text);
 
 		my $msg;
 		if(defined $obj->{retweeted_status}){
@@ -196,7 +216,21 @@ sub stream_callback
 			$msg = "$date [$src_name($src)] becomes [$dst_name($dst)] follower.";
 		}elsif($event eq 'list_member_added'){
 			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
-			$msg = "$date [$src_name($src)] added $list.";
+			$msg = "$date [$src_name($src)] added [$dst_name($dst)] to $list.";
+		}elsif($event eq 'list_member_removed'){
+			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
+			$msg = "$date [$src_name($src)] removed [$dst_name($dst)] from $list.";
+		}elsif($event eq 'list_user_subscribed'){
+			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
+			$msg = "$date [$src_name($src)] subscribed $list created by [$dst_name($dst)].";
+		}elsif($event eq 'list_user_unsubscribed'){
+			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
+			$msg = "$date [$src_name($src)] unsubscribed $list created by[$dst_name($dst)].";
+		}elsif($event eq 'user_update' || $event eq 'list_created' || $event eq 'list_destroyed' || $event eq 'access_revoked' || 
+				$event eq 'access_unrevoked'){
+				#do nothing
+		}else{
+			print Dumper $obj;
 		}
 
 		if(defined $msg){
@@ -215,11 +249,13 @@ sub stream_callback
 	}elsif(defined $dm){
 		my $text = Encode::encode($yaml->{irc}{charset},$dm->{text});
 		my $talker = Encode::encode($yaml->{irc}{charset},$dm->{sender}{name});
+		my $listener = Encode::encode($yaml->{irc}{charset},$dm->{recipient}{name});
 		my $src = $dm->{sender}{screen_name};
+		my $dst = $dm->{recipient}{screen_name};
 		my @epoch = localtime(str2time($dm->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 
-		my $msg = "$date DM <$talker($src)> $text";
+		my $msg = "$date DM <$talker($src)> -> <$listener($dst)> $text";
 
 		$msg =~ s/\n//g;
 		$msg =~ s/&lt;/</g;
@@ -232,6 +268,8 @@ sub stream_callback
 			print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg
 				if defined $yaml->{channels}{'@'};
 		}
+	}elsif(defined $del){
+		print Dumper $del->{status};
 	}
 	
 }
@@ -242,7 +280,18 @@ sub privmsg_callback
 
 	Encode::from_to($fragment,$yaml->{irc}{charset},'utf-8');
 	
-	my $updater = UpdateSock->new($yaml->{account});
+	my ($updater,$i);
+	$i = 5;
+	while($i --){
+		$updater = UpdateSock->new($yaml->{account});
+		last if defined $updater;
+	}
+
+	unless(defined $updater){
+		print "cannot establish twitter updater\n";
+		return;
+	}
+
 	$s->add($updater);
 	my $action = substr($fragment,0,1);
 	my $msg = $fragment;
