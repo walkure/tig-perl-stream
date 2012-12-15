@@ -20,6 +20,7 @@ use Date::Parse;
 use StreamSock;
 use IRCSock;
 use UpdateSock;
+use DeleteNoticeSock;
 
 use bigint;
 use Math::Int2Base qw(int2base base2int);
@@ -125,6 +126,10 @@ while(1){
 				}
 			}elsif(ref($sock) eq 'UpdateSock'){
 				print "Status Updated\n";
+			}elsif(ref($sock) eq 'DeleteNoticeSock'){
+				print "UID Lookup Done\n";
+				$sock->parse_line($buffer{$sock}."\n");
+#				notice_delete_tweet($sock);
 			}else{
 				print ref($sock).":Unknown socket error\n";
 			}
@@ -142,8 +147,10 @@ sub stream_callback
 	my $dm = $obj->{direct_message};
 	my $del = $obj->{delete};
 
+#	print Dumper $obj;
+
 	if(defined $obj->{text}){
-		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}->{name});
+		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}{name});
 		my @epoch = localtime(str2time($obj->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
@@ -156,7 +163,7 @@ sub stream_callback
 				push(@short_urls,{
 						offset => $url->{indices}->[0],
 						short_url => $url->{url},
-						long_url => $url->{expanded_url},
+						long_url => ' '.$url->{expanded_url}.' ',
 					});
 			}
 		}
@@ -165,14 +172,13 @@ sub stream_callback
 				push(@short_urls,{
 						offset => $url->{indices}->[0],
 						short_url => $url->{url},
-						long_url => $url->{media_url},
+						long_url => ' '.$url->{media_url}.' ',
 					});
 
 			}
 		}
 		if(scalar @short_urls) {
 			foreach my $url(sort {$b->{offset} <=> $a->{offset}} @short_urls){
-				print "idx=".$url->{offset}."\n";
 				substr($text,$url->{offset},length($url->{short_url}),$url->{long_url});
 			}
 		}
@@ -227,7 +233,7 @@ sub stream_callback
 			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
 			$msg = "$date [$src_name($src)] unsubscribed $list created by[$dst_name($dst)].";
 		}elsif($event eq 'user_update' || $event eq 'list_created' || $event eq 'list_destroyed' || $event eq 'access_revoked' || 
-				$event eq 'access_unrevoked'){
+				$event eq 'access_unrevoked' || $event eq 'block'){
 				#do nothing
 		}else{
 			print Dumper $obj;
@@ -269,7 +275,12 @@ sub stream_callback
 				if defined $yaml->{channels}{'@'};
 		}
 	}elsif(defined $del){
-		print Dumper $del->{status};
+#		print Dumper $del->{status};
+		my $notice = DeleteNoticeSock->new($yaml->{account});
+		$s->add($notice);
+		$notice->set_callback(\&delete_callback);
+		$notice->notice_delete($del->{status}{user_id_str},$del->{status}{id_str});
+
 	}
 	
 }
@@ -283,7 +294,7 @@ sub privmsg_callback
 	my ($updater,$i);
 	$i = 5;
 	while($i --){
-		$updater = UpdateSock->new($yaml->{account});
+	   	$updater = UpdateSock->new($yaml->{account});
 		last if defined $updater;
 	}
 
@@ -352,6 +363,25 @@ sub privmsg_callback
 		$msg .= $footer;
 		$updater->update({status => $msg});
 	}
+}
+
+sub delete_callback
+{
+	my ($user_info,$status_id) = @_;
+	my $name = Encode::encode($yaml->{irc}{charset},$user_info->{name});
+	my $uid = $user_info->{screen_name};
+	my $status_64id = int2base($status_id,62);
+	print "Get Deleted tweet($status_id)($status_64id) user id $uid($user_info->{id_str})\n";
+
+	my $msg = "$name($uid) deleted tweet ID:$status_64id($status_id)";
+
+	$msg =~ s/\n//g;
+	$msg =~ s/&lt;/</g;
+	$msg =~ s/&gt;/>/g;
+	$msg =~ s/&amp/&/g;
+	$msg .= "\n";
+
+	print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
 }
 
 sub get_uid
