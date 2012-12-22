@@ -182,8 +182,7 @@ sub stream_callback
 		my $id = int2base($obj->{id},62);
 
 		#expand URLs
-
-		$text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
+		my $text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
 
 		my $msg;
 		if(defined $obj->{retweeted_status}){
