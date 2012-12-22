@@ -135,6 +135,39 @@ while(1){
 print "--Unexpected codepath...\n";
 exit;
 
+sub expand_url
+{
+	my $obj = shift;
+	my $text = $obj->{text};
+	my @short_urls;
+	if(defined $obj->{entities}{urls}){
+		foreach my $url(@{$obj->{entities}{urls}} ){
+			push(@short_urls,{
+					offset => $url->{indices}->[0],
+					short_url => $url->{url},
+					long_url => $url->{expanded_url},
+				});
+		}
+	}
+	if(defined $obj->{entities}{media}){
+		foreach my $url(@{$obj->{entities}{media}}){
+			push(@short_urls,{
+					offset => $url->{indices}->[0],
+					short_url => $url->{url},
+					long_url => $url->{media_url},
+				});
+
+		}
+	}
+	if(scalar @short_urls) {
+		foreach my $url(sort {$b->{offset} <=> $a->{offset}} @short_urls){
+#			print "idx=".$url->{offset}."\n";
+			substr($text,$url->{offset},length($url->{short_url}),$url->{long_url});
+		}
+	}
+	$text;
+}
+
 sub stream_callback
 {
 	my $obj = shift;
@@ -143,41 +176,14 @@ sub stream_callback
 	my $del = $obj->{delete};
 
 	if(defined $obj->{text}){
-		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}->{name});
+		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}{name});
 		my @epoch = localtime(str2time($obj->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
 
 		#expand URLs
-		my $text = $obj->{text};
-		my @short_urls;
-		if(defined $obj->{entities}{urls}){
-			foreach my $url(@{$obj->{entities}{urls}} ){
-				push(@short_urls,{
-						offset => $url->{indices}->[0],
-						short_url => $url->{url},
-						long_url => $url->{expanded_url},
-					});
-			}
-		}
-		if(defined $obj->{entities}{media}){
-			foreach my $url(@{$obj->{entities}{media}}){
-				push(@short_urls,{
-						offset => $url->{indices}->[0],
-						short_url => $url->{url},
-						long_url => $url->{media_url},
-					});
 
-			}
-		}
-		if(scalar @short_urls) {
-			foreach my $url(sort {$b->{offset} <=> $a->{offset}} @short_urls){
-				print "idx=".$url->{offset}."\n";
-				substr($text,$url->{offset},length($url->{short_url}),$url->{long_url});
-			}
-		}
-
-		$text = Encode::encode($yaml->{irc}{charset},$text);
+		$text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
 
 		my $msg;
 		if(defined $obj->{retweeted_status}){
@@ -198,7 +204,7 @@ sub stream_callback
 				if defined $yaml->{channels}{'@'};
 		}
 	}elsif(defined $event){
-		my $text = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{text});
+		my $text = Encode::encode($yaml->{irc}{charset},expand_url($obj->{target_object}));
 		my $src_name= Encode::encode($yaml->{irc}{charset},$obj->{source}{name});
 		my $dst_name = Encode::encode($yaml->{irc}{charset},$obj->{target}{name});
 		my $src = $obj->{source}{screen_name};
