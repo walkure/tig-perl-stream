@@ -290,7 +290,7 @@ sub stream_callback
 		my $user_info = $uids->get($del->{status}{user_id_str});
 		if(defined $user_info){
 			print 'Lookup cache user_info:'.$user_info->{id_str}."\n";
-			delete_notice($user_info,$del->{status}{user_id_str});
+			delete_notice($user_info,$del->{status}{id_str});
 		}else{
 			my $notice = DeleteNoticeSock->new($yaml->{account});
 			$s->add($notice);
@@ -385,7 +385,14 @@ sub privmsg_callback
 sub delete_callback
 {
 	my ($user_info,$status_id) = @_;
-	$uids->set($user_info->{id_str} => $user_info);
+#	$uids->set($user_info->{id_str} => $user_info);
+	$uids->set(
+		$user_info->{id_str} => {
+			id_str 		=> $user_info->{id_str},
+			name 		=> $user_info->{name},
+			screen_name => $user_info->{screen_name},
+		}
+	);
 	print 'Set UserInfoCache:'.$user_info->{id_str}."\n";
 	delete_notice($user_info,$status_id);
 }
