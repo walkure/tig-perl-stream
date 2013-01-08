@@ -25,6 +25,8 @@ use DeleteNoticeSock;
 use bigint;
 use Math::Int2Base qw(int2base base2int);
 
+use Cache::LRU;
+
 $| = 1;
 
 my $path = $ARGV[0] || 'config.yaml';
@@ -32,6 +34,8 @@ print "++Loading YAML:$path\n";
 my $yaml = YAML::Syck::LoadFile($path);
 
 $yaml->{irc}{channels} = join(',',values %{$yaml->{channels}});
+my $uids = Cache::LRU->new(size => 100);
+
 
 print "++Creating sockets\n";
 my $stream = StreamSock->new($yaml->{account}); 
@@ -283,10 +287,16 @@ sub stream_callback
 		}
 	}elsif(defined $del){
 #		print Dumper $del->{status};
-		my $notice = DeleteNoticeSock->new($yaml->{account});
-		$s->add($notice);
-		$notice->set_callback(\&delete_callback);
-		$notice->notice_delete($del->{status}{user_id_str},$del->{status}{id_str});
+		my $user_info = $uids->get($del->{status}{user_id_str});
+		if(defined $user_info){
+			print 'Lookup cache user_info:'.$user_info->{id_str}."\n";
+			delete_notice($user_info,$del->{status}{user_id_str});
+		}else{
+			my $notice = DeleteNoticeSock->new($yaml->{account});
+			$s->add($notice);
+			$notice->set_callback(\&delete_callback);
+			$notice->notice_delete($del->{status}{user_id_str},$del->{status}{id_str});
+		}
 
 	}
 	
@@ -375,10 +385,20 @@ sub privmsg_callback
 sub delete_callback
 {
 	my ($user_info,$status_id) = @_;
+	$uids->set($user_info->{id_str} => $user_info);
+	print 'Set UserInfoCache:'.$user_info->{id_str}."\n";
+	delete_notice($user_info,$status_id);
+}
+
+sub delete_notice
+{
+	my ($user_info,$status_id) = @_;
+
 	my $name = Encode::encode($yaml->{irc}{charset},$user_info->{name});
 	my $uid = $user_info->{screen_name};
 	my $status_64id = int2base($status_id,62);
 	print "Get Deleted tweet($status_id)($status_64id) user id $uid($user_info->{id_str})\n";
+
 
 	my $msg = "$name($uid) deleted tweet ID:$status_64id($status_id)";
 
