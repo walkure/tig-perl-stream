@@ -35,7 +35,8 @@ sub notice_delete
 	#lookup user id
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'GET',
-		url    => 'http://api.twitter.com/1/users/show.json',
+#		url    => 'http://api.twitter.com/1/users/show.json',
+		url    => 'http://api.twitter.com/1.1/users/show.json',
 		token  => *$self->{token},
 		params => {user_id => $user_id},
 	);
