@@ -37,15 +37,18 @@ sub send_request
 
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'GET',
-		url    => 'https://userstream.twitter.com/2/user.json',
+#		url    => 'https://userstream.twitter.com/2/user.json',
+		url    => 'https://userstream.twitter.com/1.1/user.json',
 		token  => *$self->{token},
+#		params => {replies => 'all'},
 	);
 
 	$request->header(Host => $request->uri->host);
 	$request->header(UserAgent => 'UA-2202-JP');
 
 	#Begin Session
-	print $self $request->method.' '.$request->uri->path." HTTP/1.0\r\n";
+	print 'Connect to:'.$request->uri->path_query."\n";
+	print $self $request->method.' '.$request->uri->path_query." HTTP/1.0\r\n";
 	print $self $request->headers->as_string;
 	print $self "\r\n";
 }

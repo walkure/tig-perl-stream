@@ -28,7 +28,8 @@ sub update
 
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'POST',
-		url    => 'http://api.twitter.com/1/statuses/update.json',
+#		url    => 'http://api.twitter.com/1/statuses/update.json',
+		url    => 'http://api.twitter.com/1.1/statuses/update.json',
 		token  => *$self->{token},
 		params => $params,
 	);
@@ -42,7 +43,8 @@ sub destroy
 
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'POST',
-		url    => "http://api.twitter.com/1/statuses/destroy/$id.json",
+#		url    => "http://api.twitter.com/1/statuses/destroy/$id.json",
+		url    => "http://api.twitter.com/1.1/statuses/destroy/$id.json",
 		token  => *$self->{token},
 		params => {id => $id},
 	);
@@ -57,7 +59,8 @@ sub favorite
 
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'POST',
-		url    => "http://api.twitter.com/1/favorites/$mode/$id.json",
+#		url    => "http://api.twitter.com/1/favorites/$mode/$id.json",
+		url    => "http://api.twitter.com/1.1/favorites/$mode.json",
 		token  => *$self->{token},
 		params => {id => $id},
 	);
@@ -71,7 +74,8 @@ sub retweet
 
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'POST',
-		url    => "http://api.twitter.com/1/statuses/retweet/$id.json",
+		url    => "http://api.twitter.com/1.1/statuses/retweet/$id.json",
+#		url    => "http://api.twitter.com/1/statuses/retweet/$id.json",
 		token  => *$self->{token},
 		params => {id => $id},
 	);
@@ -84,9 +88,9 @@ sub process_request
 	my ($self,$request) = @_;
 
 	$request->header(Host => $request->uri->host);
-#	print $request->uri->path."\n";
+	print 'call REST API:'.$request->uri->path_query."\n";
 
-	print $self $request->method.' '.$request->uri->path." HTTP/1.0\r\n";
+	print $self $request->method.' '.$request->uri->path_query." HTTP/1.0\r\n";
 	print $self $request->headers->as_string."\r\n";
 	print $self $request->content()."\r\n";
 }
