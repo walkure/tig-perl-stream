@@ -185,22 +185,21 @@ sub stream_callback
 	my $dm = $obj->{direct_message};
 	my $del = $obj->{delete};
 
-#	print Dumper $obj;
-
 	if(defined $obj->{text}){
 		my $talker = Encode::encode($yaml->{irc}{charset},$obj->{user}{name});
 		my @epoch = localtime(str2time($obj->{created_at}));
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
 
-		#expand URLs
-		my $text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
-
-		my $msg;
+		my ($msg,$text);
 		if(defined $obj->{retweeted_status}){
-		   	$msg = "$date <$talker($obj->{user}->{screen_name}):$id>R $text";
+			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj->{retweeted_status}));
+
+		   	$msg = "$date <$talker($obj->{user}{screen_name}):$id>RT @".$obj->{retweeted_status}{user}{screen_name}.": $text";
 		}else{
-			$msg = "$date <$talker($obj->{user}->{screen_name}):$id> $text";
+			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
+
+			$msg = "$date <$talker($obj->{user}{screen_name}):$id> $text";
 		}
 
 		$msg =~ s/\n//g;
@@ -402,12 +401,13 @@ sub delete_notice
 	my ($user_info,$status_id) = @_;
 
 	my $name = Encode::encode($yaml->{irc}{charset},$user_info->{name});
-	my $uid = $user_info->{screen_name};
+	my $scrn = $user_info->{screen_name};
+	my $uid  = $user_info->{id_str};
 	my $status_64id = int2base($status_id,62);
-	print "Get Deleted tweet($status_id)($status_64id) user id $uid($user_info->{id_str})\n";
+	print "Get Deleted tweet($status_id)($status_64id) user id $scrn($user_info->{id_str})\n";
 
 
-	my $msg = "$name($uid) deleted tweet ID:$status_64id($status_id)";
+	my $msg = "$name($scrn)(id=$uid) deleted tweet ID:$status_64id($status_id)";
 
 	$msg =~ s/\n//g;
 	$msg =~ s/&lt;/</g;
