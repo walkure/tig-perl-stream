@@ -1,18 +1,14 @@
-package StreamSock;
-
-# tig-perl-stream 
-#
-# by walkure at 3pf.jp
+package DeleteNoticeSock;
 
 use strict;
 use warnings;
 
 use Encode;
 use OAuth::Lite::Consumer;
-use IO::Socket::SSL;
-use JSON;
 use Data::Dumper;
-use base qw/IO::Socket::SSL/;
+use JSON;
+
+use base qw/IO::Socket::INET/;
 
 sub configure
 {
@@ -20,37 +16,45 @@ sub configure
 
 	*$self->{consumer} = OAuth::Lite::Consumer -> new(%{$args->{PeerAddr}});
 	*$self->{token}    = OAuth::Lite::Token    -> new(%{$args->{PeerAddr}});
-	$args->{PeerAddr} = 'userstream.twitter.com:https';
+	$args->{PeerAddr} = 'api.twitter.com:http';
 	$self->SUPER::configure($args);
 }
 
 sub set_callback
 {
-	my ($self,$func) = @_; 
+	my ($self,$func) = @_;
 	*$self->{callback} = $func;
 }
 
-
-sub send_request
+sub notice_delete 
 {
-	my $self = shift;
+	my ($self,$user_id,$status_id) = @_;
 
+	print "uid:$user_id,status:$status_id\n";
+
+	#lookup user id
 	my $request = *$self->{consumer}->gen_oauth_request(
 		method => 'GET',
-#		url    => 'https://userstream.twitter.com/2/user.json',
-		url    => 'https://userstream.twitter.com/1.1/user.json',
+		url    => 'http://api.twitter.com/1/users/show.json',
 		token  => *$self->{token},
-#		params => {replies => 'all'},
+		params => {user_id => $user_id},
 	);
 
-	$request->header(Host => $request->uri->host);
-	$request->header(UserAgent => 'UA-2202-JP');
+	*$self->{status_id} = $status_id;
+	$self->process_request($request);
+}
 
-	#Begin Session
-	print 'Connect to:'.$request->uri->path_query."\n";
+
+sub process_request
+{
+	my ($self,$request) = @_;
+
+	$request->header(Host => $request->uri->host);
+#	print $request->uri->path_query."\n";
+
 	print $self $request->method.' '.$request->uri->path_query." HTTP/1.0\r\n";
-	print $self $request->headers->as_string;
-	print $self "\r\n";
+	print $self $request->headers->as_string."\r\n";
+	print $self $request->content()."\r\n";
 }
 
 sub parse_line
@@ -63,15 +67,15 @@ sub parse_line
 			$self->parse_header($line);
 		}else{
 			*$self->{state} = 1;
-#			print Dumper *$self->{header};
 		}
 	}
+#	print "[$line]\n";
 }
 
 sub parse_header
 {
 	my ($self,$line) = @_;
-	
+
 	unless(defined *$self->{header}){
 		*$self->{header} = HTTP::Response->parse($line);
 	}else{
@@ -83,14 +87,16 @@ sub parse_header
 sub parse_body
 {
 	my ($self,$line) = @_;
-	
+
 	my $obj = eval{ decode_json($line) };
 	unless(defined $obj){
-		print "Cannot decode JSON[$line]\n";
+		print "Cannot decode JSON($@)[$line]\n";
 		return;
 	}
 
-	*$self->{callback}->($obj) if defined *$self->{callback};
+#	print Dumper $obj;
+	*$self->{callback}->($obj,*$self->{status_id}) if defined *$self->{callback};
+
 }
 
 1;

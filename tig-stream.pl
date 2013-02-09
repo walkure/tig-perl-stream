@@ -20,9 +20,12 @@ use Date::Parse;
 use StreamSock;
 use IRCSock;
 use UpdateSock;
+use DeleteNoticeSock;
 
 use bigint;
 use Math::Int2Base qw(int2base base2int);
+
+use Cache::LRU;
 
 $| = 1;
 
@@ -31,6 +34,8 @@ print "++Loading YAML:$path\n";
 my $yaml = YAML::Syck::LoadFile($path);
 
 $yaml->{irc}{channels} = join(',',values %{$yaml->{channels}});
+my $uids = Cache::LRU->new(size => 100);
+
 
 print "++Creating sockets\n";
 my $stream = StreamSock->new($yaml->{account}); 
@@ -125,6 +130,10 @@ while(1){
 				}
 			}elsif(ref($sock) eq 'UpdateSock'){
 				print "Status Updated\n";
+			}elsif(ref($sock) eq 'DeleteNoticeSock'){
+				print "UID Lookup Done\n";
+				$sock->parse_line($buffer{$sock}."\n");
+#				notice_delete_tweet($sock);
 			}else{
 				print ref($sock).":Unknown socket error\n";
 			}
@@ -140,12 +149,13 @@ sub expand_url
 	my $obj = shift;
 	my $text = $obj->{text};
 	my @short_urls;
+
 	if(defined $obj->{entities}{urls}){
 		foreach my $url(@{$obj->{entities}{urls}} ){
 			push(@short_urls,{
 					offset => $url->{indices}->[0],
 					short_url => $url->{url},
-					long_url => $url->{expanded_url},
+					long_url => ' '.$url->{expanded_url}.' ',
 				});
 		}
 	}
@@ -154,17 +164,17 @@ sub expand_url
 			push(@short_urls,{
 					offset => $url->{indices}->[0],
 					short_url => $url->{url},
-					long_url => $url->{media_url},
+					long_url => ' '.$url->{media_url}.' ',
 				});
 
 		}
 	}
 	if(scalar @short_urls) {
 		foreach my $url(sort {$b->{offset} <=> $a->{offset}} @short_urls){
-#			print "idx=".$url->{offset}."\n";
 			substr($text,$url->{offset},length($url->{short_url}),$url->{long_url});
 		}
 	}
+
 	$text;
 }
 
@@ -181,14 +191,15 @@ sub stream_callback
 		my $date = sprintf('%02d:%02d:%02d',$epoch[2],$epoch[1],$epoch[0]);
 		my $id = int2base($obj->{id},62);
 
-		#expand URLs
-		my $text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
-
-		my $msg;
+		my ($msg,$text);
 		if(defined $obj->{retweeted_status}){
-		   	$msg = "$date <$talker($obj->{user}->{screen_name}):$id>R $text";
+			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj->{retweeted_status}));
+
+		   	$msg = "$date <$talker($obj->{user}{screen_name}):$id>RT @".$obj->{retweeted_status}{user}{screen_name}.": $text";
 		}else{
-			$msg = "$date <$talker($obj->{user}->{screen_name}):$id> $text";
+			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
+
+			$msg = "$date <$talker($obj->{user}{screen_name}):$id> $text";
 		}
 
 		$msg =~ s/\n//g;
@@ -232,7 +243,7 @@ sub stream_callback
 			my $list = Encode::encode($yaml->{irc}{charset},$obj->{target_object}{full_name});
 			$msg = "$date [$src_name($src)] unsubscribed $list created by[$dst_name($dst)].";
 		}elsif($event eq 'user_update' || $event eq 'list_created' || $event eq 'list_destroyed' || $event eq 'access_revoked' || 
-				$event eq 'access_unrevoked'){
+				$event eq 'access_unrevoked' || $event eq 'block'){
 				#do nothing
 		}else{
 			print Dumper $obj;
@@ -274,7 +285,18 @@ sub stream_callback
 				if defined $yaml->{channels}{'@'};
 		}
 	}elsif(defined $del){
-		print Dumper $del->{status};
+#		print Dumper $del->{status};
+		my $user_info = $uids->get($del->{status}{user_id_str});
+		if(defined $user_info){
+			print 'Lookup cache user_info:'.$user_info->{id_str}."\n";
+			delete_notice($user_info,$del->{status}{id_str});
+		}else{
+			my $notice = DeleteNoticeSock->new($yaml->{account});
+			$s->add($notice);
+			$notice->set_callback(\&delete_callback);
+			$notice->notice_delete($del->{status}{user_id_str},$del->{status}{id_str});
+		}
+
 	}
 	
 }
@@ -288,7 +310,7 @@ sub privmsg_callback
 	my ($updater,$i);
 	$i = 5;
 	while($i --){
-		$updater = UpdateSock->new($yaml->{account});
+	   	$updater = UpdateSock->new($yaml->{account});
 		last if defined $updater;
 	}
 
@@ -357,6 +379,43 @@ sub privmsg_callback
 		$msg .= $footer;
 		$updater->update({status => $msg});
 	}
+}
+
+sub delete_callback
+{
+	my ($user_info,$status_id) = @_;
+#	$uids->set($user_info->{id_str} => $user_info);
+	$uids->set(
+		$user_info->{id_str} => {
+			id_str 		=> $user_info->{id_str},
+			name 		=> $user_info->{name},
+			screen_name => $user_info->{screen_name},
+		}
+	);
+	print 'Set UserInfoCache:'.$user_info->{id_str}."\n";
+	delete_notice($user_info,$status_id);
+}
+
+sub delete_notice
+{
+	my ($user_info,$status_id) = @_;
+
+	my $name = Encode::encode($yaml->{irc}{charset},$user_info->{name});
+	my $scrn = $user_info->{screen_name};
+	my $uid  = $user_info->{id_str};
+	my $status_64id = int2base($status_id,62);
+	print "Get Deleted tweet($status_id)($status_64id) user id $scrn($user_info->{id_str})\n";
+
+
+	my $msg = "$name($scrn)(id=$uid) deleted tweet ID:$status_64id($status_id)";
+
+	$msg =~ s/\n//g;
+	$msg =~ s/&lt;/</g;
+	$msg =~ s/&gt;/>/g;
+	$msg =~ s/&amp/&/g;
+	$msg .= "\n";
+
+	print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
 }
 
 sub get_uid
