@@ -193,9 +193,9 @@ sub stream_callback
 
 		my ($msg,$text);
 		if(defined $obj->{retweeted_status}){
-			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj->{retweeted_status}));
+			$text = '@'.$obj->{retweeted_status}{user}{screen_name}.': '.Encode::encode($yaml->{irc}{charset},expand_url($obj->{retweeted_status}));
 
-		   	$msg = "$date <$talker($obj->{user}{screen_name}):$id>RT @".$obj->{retweeted_status}{user}{screen_name}.": $text";
+		   	$msg = "$date <$talker($obj->{user}{screen_name}):$id>RT $text";
 		}else{
 			$text = Encode::encode($yaml->{irc}{charset},expand_url($obj));
 
