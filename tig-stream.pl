@@ -208,10 +208,10 @@ sub stream_callback
 		$msg =~ s/&amp/&/g;
 		$msg .= "\n";
 
-		print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
-		if($text =~ /$yaml->{account}{name}/i ){
-			print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg
-				if defined $yaml->{channels}{'@'};
+		if($text =~ /$yaml->{account}{name}/i && defined $yaml->{channels}{'@'}){
+			print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg;
+		}else{
+			print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
 		}
 	}elsif(defined $event){
 		my $text = Encode::encode($yaml->{irc}{charset},expand_url($obj->{target_object}));
@@ -256,10 +256,11 @@ sub stream_callback
 			$msg =~ s/&amp/&/g;
 			$msg .= "\n";
 
-			print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
-			if(defined $yaml->{account}{name} && length $yaml->{account}{name} ){
-				print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg
-					if defined $yaml->{channels}{'@'};
+			if(defined $yaml->{account}{name} && length $yaml->{account}{name} &&
+					defined $yaml->{channels}{'@'}){
+				print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg;
+			}else{
+				print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
 			}
 		}
 	}elsif(defined $dm){
@@ -279,10 +280,11 @@ sub stream_callback
 		$msg =~ s/&amp/&/g;
 		$msg .= "\n";
 
-		print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
-		if(defined $yaml->{account}{name} && length $yaml->{account}{name} ){
-			print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg
-				if defined $yaml->{channels}{'@'};
+		if(defined $yaml->{account}{name} && length $yaml->{account}{name} &&
+				defined $yaml->{channels}{'@'} ){
+			print $irc 'PRIVMSG '.$yaml->{channels}{'@'}.' :'.$msg;
+		}else{
+			print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.$msg;
 		}
 	}elsif(defined $del){
 #		print Dumper $del->{status};
