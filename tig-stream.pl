@@ -6,13 +6,14 @@
 
 use strict;
 use warnings;
-
 use diagnostics;
+
+use utf8;
+binmode STDOUT,':utf8';
 
 use Encode;
 use IO::Select;
 use JSON;
-use Data::Dumper;
 use YAML::Syck;
 
 use Date::Parse;
@@ -27,6 +28,14 @@ use Math::Int2Base qw(int2base base2int);
 
 use Cache::LRU;
 
+use Data::Dumper;
+{
+	package Data::Dumper;
+	sub qquote { return wantarray? @_ : shift; }
+}
+$Data::Dumper::Useperl = 1;
+
+
 $| = 1;
 
 my $path = $ARGV[0] || 'config.yaml';
@@ -35,7 +44,6 @@ my $yaml = YAML::Syck::LoadFile($path);
 
 $yaml->{irc}{channels} = join(',',values %{$yaml->{channels}});
 my $uids = Cache::LRU->new(size => 100);
-
 
 print "++Creating sockets\n";
 my $stream = StreamSock->new($yaml->{account}); 
@@ -129,7 +137,9 @@ while(1){
 					print "--Failure to connect IRC server\n";
 				}
 			}elsif(ref($sock) eq 'UpdateSock'){
+				$sock->parse_line($buffer{$sock}."\n");
 				print "Status Updated\n";
+				updated_process($sock);
 			}elsif(ref($sock) eq 'DeleteNoticeSock'){
 				print "UID Lookup Done\n";
 				$sock->parse_line($buffer{$sock}."\n");
@@ -429,4 +439,27 @@ sub get_uid
 	return $uid if(defined ($uid = eval('base2int($key,62);')));
 
 	undef;
+}
+
+sub updated_process
+{
+	my $sock = shift;
+
+	my $hdr = *$sock->{header};
+	my $obj = *$sock->{json};
+
+	return if($hdr->code == 200);
+	return unless defined $obj->{errors};
+	
+	my $err = $obj->{errors};
+	my $msg = $err;
+
+	$msg =  '('.$err->[0]{code}.')'.$err->[0]{message}
+		if(ref($err) eq 'ARRAY');
+	
+	$msg = '+'.$hdr->status_line.':'.$msg."\n";
+	print "Error:$msg";
+
+	print $irc 'PRIVMSG '.$yaml->{channels}{'*'}.' :'.Encode::encode($yaml->{irc}{charset},$msg);
+
 }

@@ -9,8 +9,8 @@ use warnings;
 
 use Encode;
 use OAuth::Lite::Consumer;
-use Data::Dumper;
 use base qw/IO::Socket::INET/;
+use JSON;
 
 sub configure
 {
@@ -119,6 +119,7 @@ sub parse_header
 		my($name,$body) = split(/:/,$line);
 		*$self->{header}->header($name,$body);
 	}
+
 }
 
 sub parse_body
@@ -130,7 +131,7 @@ sub parse_body
 		print "Cannot decode JSON[$line]\n";
 		return;
 	}
-#	print Dumper $obj;
+	*$self->{json} = $obj;
 }
 
 1;
