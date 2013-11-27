@@ -44,11 +44,11 @@ sub send_request
 	);
 
 	$request->header(Host => $request->uri->host);
-	$request->header(UserAgent => 'UA-2202-JP');
+	$request->header(UserAgent => 'UserStream Client');
 
 	#Begin Session
 	print 'Connect to:'.$request->uri->path_query."\n";
-	print $self $request->method.' '.$request->uri->path_query." HTTP/1.0\r\n";
+	print $self $request->method.' '.$request->uri->path_query." HTTP/1.1\r\n";
 	print $self $request->headers->as_string;
 	print $self "\r\n";
 }
@@ -83,6 +83,14 @@ sub parse_header
 sub parse_body
 {
 	my ($self,$line) = @_;
+	
+	if($line =~ /^[a-f0-9]+/){
+		my $length = hex($line);
+		if($length > 0){
+			*$self->{length} = $length;
+			return;
+		}
+	}
 	
 	my $obj = eval{ decode_json($line) };
 	unless(defined $obj){
